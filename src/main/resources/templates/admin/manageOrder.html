@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+    <title>오마이댕 - 관리자페이지 (주문관리)</title>
+    <!-- Favicon-->
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
+    <!-- Bootstrap icons-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <!-- Core theme CSS (includes Bootstrap)-->
+    <link href="/css/admin/manageOrder.css" rel="stylesheet" />
+</head>
+<body>
+<!-- header -->
+<div th:replace="fragments/manageHeader :: manageHeader"></div>
+
+<div class="order">
+    <h2>주문관리</h2>
+    <form class="orderSearch" action="/manageOrder" method="get">
+        <table class="search">
+            <tr>
+                <th scope="row">검색어</th>
+                <td>
+                    <select name="searchType">
+                        <option value="id" th:selected="${searchType == 'id'}">주문번호</option>
+                        <option value="custName" th:selected="${searchType == 'custName'}">주문자명</option>
+                        <option value="custId" th:selected="${searchType == 'custId'}">회원아이디</option>
+                        <option value="itemName" th:selected="${searchType == 'itemName'}">제품명</option>
+                    </select>
+                    <input type="text" name="searchKeyword" size="30" th:value="${searchKeyword}">
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">기간검색</th>
+                <td>
+                    <select name="spt">
+                        <option value="order_time">주문날짜</option>
+                    </select>
+                    <label for="startDate" class="sound_only">시작일</label>
+                    <input type="date" id="startDate" name="startDate" value="2024-01-01" min="2024-01-01" max="2024-12-31" th:value="${startDate}">
+                    ~
+                    <label for="endDate" class="sound_only">종료일</label>
+                    <input type="date" id="endDate" name="endDate" value="" min="2024-01-01" max="2026-12-31" th:value="${endDate}">
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">레벨검색</th>
+                <td>
+                    <label><input type="radio" name="orderStatus" value="" th:checked="${orderStatus == ''}"> 전체</label>
+                    <label><input type="radio" name="orderStatus" value="order" th:checked="${orderStatus == 'order'}"> 주문</label>
+                    <label><input type="radio" name="orderStatus" value="complete" th:checked="${orderStatus == 'complete'}"> 완료</label>
+                    <label><input type="radio" name="orderStatus" value="cancel" th:checked="${orderStatus == 'cancel'}"> 취소</label>
+                </td>
+            </tr>
+        </table>
+        <div class="btn">
+            <input type="submit" value="검색">
+            <input type="button" value="초기화" onclick="window.location.href='/manageOrder';">
+        </div>
+    </form>
+
+    <!-- 검색시 해당하는 주문이 없으면 -->
+    <div th:if="${emptyResult}" style="color:red; text-align: center;">
+        <p>해당하는 주문이 없습니다.</p>
+    </div>
+
+    <div>
+        <table class="search_table">
+            <div class="btn">
+                <input type="button" value="완료" onclick="updateOrderStatus('COMPLETE')">
+                <input type="button" value="주문취소" onclick="updateOrderStatus('CANCEL')">
+            </div>
+            <thead class="list">
+            <tr>
+                <th scope="col"><input type="checkbox" name="checkAll" onclick="selectAll(this)"></th>
+                <th scope="col">주문번호</th>
+                <th scope="col">제품명</th>
+                <th scope="col">주문자명</th>
+                <th scope="col">주문날짜</th>
+                <th scope="col">금액</th>
+                <th scope="col">개수</th>
+                <th scope="col">배송요청사항</th>
+                <th scope="col">주소</th>
+                <th scope="col">주문상태</th>
+            </tr>
+            </thead>
+            <tbody class="list">
+            <tr th:each="order : ${orders}">
+                <td><input type="checkbox" name="check" th:value="${order.orderDetailNum}"></td>
+                <td th:text="${order.orderNum}"></td>
+                <td th:text="${order.itemName}"></td>
+                <td th:text="${order.custName + ' (' + order.custId + ')' }"></td>
+                <td th:utext="${#temporals.format(order.orderDate, 'yyyy-MM-dd') + '<br>' + #temporals.format(order.orderDate, 'HH:mm:ss')}"></td>
+                <td th:text="${order.price}"></td>
+                <td th:text="${order.itemCnt}"></td>
+                <td th:text="${order.orderReq}"></td>
+                <td th:text="${order.address}"></td>
+                <td th:text="${order.orderStatus}" th:if="${order.orderStatus == 'CANCEL'}" style="color:red;"></td>
+                <td th:text="${order.orderStatus}" th:if="${order.orderStatus == 'COMPLETE'}" style="color:blue;"></td>
+                <td th:text="${order.orderStatus}" th:if="${order.orderStatus == 'ORDER'}" style="color:green;"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 페이징 네비게이션 -->
+<div th:if="${!emptyResult}">
+    <ul class="pagination justify-content-center">
+        <!-- 이전 버튼 -->
+        <li class="page-item" th:if="${!pageHandler.firstPage}">
+            <a class="page-link" th:href="@{/manageOrder(page=${pageHandler.beginPage - 1}, pageSize=${pageHandler.pageSize}, searchType=${searchType}, searchKeyword=${searchKeyword}, startDate=${startDate}, endDate=${endDate}, orderStatus=${orderStatus})}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+
+        <!-- 페이지 번호 -->
+        <li class="page-item" th:each="i : ${#numbers.sequence(pageHandler.beginPage, pageHandler.endPage)}" th:classappend="${i == pageHandler.page} ? 'active'">
+            <a class="page-link" th:href="@{/manageOrder(page=${i}, pageSize=${pageHandler.pageSize}, searchType=${searchType}, searchKeyword=${searchKeyword}, startDate=${startDate}, endDate=${endDate}, orderStatus=${orderStatus})}" th:text="${i}"></a>
+        </li>
+
+        <!-- 다음 버튼 -->
+        <li class="page-item" th:if="${!pageHandler.lastPage}">
+            <a class="page-link" th:href="@{/manageOrder(page=${pageHandler.endPage + 1}, pageSize=${pageHandler.pageSize}, searchType=${searchType}, searchKeyword=${searchKeyword}, startDate=${startDate}, endDate=${endDate}, orderStatus=${orderStatus})}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+<div th:replace="fragments/footer :: footer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/scripts.js"></script>
+
+<script>
+    function selectAll(selectAllCheckbox) {
+        document.querySelectorAll('input[name="check"]').forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+    }
+
+    function updateOrderStatus(status) {
+        const checkboxes = Array.from(document.querySelectorAll('input[name="check"]:checked'));
+        const orderDetailNums = checkboxes.map(cb => parseInt(cb.value));
+
+        if (orderDetailNums.length === 0) {
+            alert("선택된 주문이 없습니다.");
+            return;
+        }
+
+        if (!confirm("선택된 주문의 주문상태를 업데이트합니다.")) {
+            return;
+        }
+
+        fetch('/updateOrderStatus', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                orderDetailNums: orderDetailNums,
+                orderStatus: status
+            }),
+        })
+        .then(response => {
+            if (response.ok) {
+                alert("주문 상태가 업데이트되었습니다.");
+                window.location.reload();
+            } else {
+                alert("주문 상태 업데이트에 실패했습니다.");
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("주문 상태 업데이트 중 오류가 발생했습니다.");
+        });
+    }
+</script>
+</body>
+</html>

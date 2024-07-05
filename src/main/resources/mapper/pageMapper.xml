@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.pet.mapper.PageMapper">
+    <select id="itemAllPaged" parameterType="map" resultType="itemDto">
+        SELECT item_num, category_name, item_name, item_price, item_cnt, item_image, item_info
+        FROM item
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countItems" resultType="int">
+        SELECT COUNT(*)
+        FROM item
+    </select>
+
+    <select id="itemsByCategoryPaged" parameterType="map" resultType="itemDto">
+        SELECT item_num, category_name, item_name, item_price, item_cnt, item_image, item_info
+        FROM item
+        WHERE category_name = #{categoryName}
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countItemsByCategory" parameterType="String" resultType="int">
+        SELECT COUNT(*)
+        FROM item
+        WHERE category_name = #{categoryName}
+    </select>
+
+    <select id="noticePaged" parameterType="map" resultType="noticeDto">
+        SELECT *
+        FROM notice
+        LIMIT 10 OFFSET 5;
+    </select>
+
+    <select id="countNotice">
+        SELECT COUNT(*)
+        FROM notice
+    </select>
+</mapper>
